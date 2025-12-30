@@ -1,0 +1,33 @@
+export const FRIENDSHIP_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  BLOCKED: 'BLOCKED',
+} as const;
+
+export const AVAILABILITY_STATUS = {
+  OPEN: 'OPEN',
+  CLOSED: 'CLOSED',
+  BUSY: 'BUSY',
+  NONE: 'NONE',
+} as const;
+
+export const PROPOSAL_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  DECLINED: 'DECLINED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const MESSAGE_TYPE = {
+  TEXT: 'TEXT',
+  MEETING_PROPOSAL: 'MEETING_PROPOSAL',
+  SYSTEM: 'SYSTEM',
+} as const;
+
+export const PHONE_VERIFICATION_CODE = '000000';
+
+
+
+
+
+

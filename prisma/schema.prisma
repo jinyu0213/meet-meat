@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                               String             @id @default(cuid())
+  username                         String             @unique
+  passwordHash                     String
+  phoneNumber                      String
+  isPhoneVerified                  Boolean            @default(false)
+  displayName                      String?
+  bio                              String?
+  avatarUrl                        String?
+  isFriendOnlyForMeetingRequests   Boolean            @default(false)
+  dayEntries                       DayEntry[]
+  comments                         DayComment[]
+  sentProposals                    MeetingProposal[]  @relation("ProposalProposer")
+  receivedProposals                MeetingProposal[]  @relation("ProposalReceiver")
+  friendshipsRequested             Friendship[]       @relation("Requester")
+  friendshipsReceived              Friendship[]       @relation("Receiver")
+  conversationsA                  Conversation[]     @relation("ConversationA")
+  conversationsB                  Conversation[]     @relation("ConversationB")
+  messages                         Message[]
+  sessions                         Session[]
+  createdAt                        DateTime           @default(now())
+  updatedAt                        DateTime           @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  receiverId  String
+  requester   User             @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    User             @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      String           @default("PENDING")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, receiverId])
+}
+
+model DayEntry {
+  id                 String             @id @default(cuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date               DateTime
+  availabilityStatus String             @default("NONE")
+  personalNote       String?
+  comments           DayComment[]
+  meetingProposals   MeetingProposal[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([userId, date])
+}
+
+model DayComment {
+  id         String   @id @default(cuid())
+  dayEntryId String
+  dayEntry   DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content    String
+  createdAt  DateTime @default(now())
+}
+
+model MeetingProposal {
+  id          String         @id @default(cuid())
+  proposerId  String
+  proposer    User           @relation("ProposalProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User           @relation("ProposalReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  dayEntryId  String
+  dayEntry    DayEntry       @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+  status      String         @default("PENDING")
+  message     String?
+  respondedAt DateTime?
+  createdAt   DateTime       @default(now())
+  messages    Message[]
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  userAId       String
+  userBId       String
+  userA         User      @relation("ConversationA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB         User      @relation("ConversationB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id                        String        @id @default(cuid())
+  conversationId            String
+  conversation              Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId                  String
+  sender                    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content                   String
+  messageType               String        @default("TEXT")
+  relatedMeetingProposalId  String?
+  relatedMeetingProposal    MeetingProposal? @relation(fields: [relatedMeetingProposalId], references: [id])
+  createdAt                 DateTime      @default(now())
+}
+
