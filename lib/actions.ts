@@ -123,7 +123,7 @@ export const logoutAction = async () => {
   redirect('/');
 };
 
-export const updateProfileAction = async (formData: FormData) => {
+export const updateProfileAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) {
     redirect('/auth/login');
@@ -137,7 +137,7 @@ export const updateProfileAction = async (formData: FormData) => {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    throw new Error(parsed.error.issues[0].message);
   }
 
   const data = parsed.data;
@@ -153,7 +153,6 @@ export const updateProfileAction = async (formData: FormData) => {
 
   revalidatePath('/settings/profile');
   revalidatePath(`/profile/${user.username}`);
-  return { success: '프로필이 업데이트되었습니다.' };
 };
 
 const ensureOwner = async (username: string) => {
@@ -164,14 +163,14 @@ const ensureOwner = async (username: string) => {
   return user;
 };
 
-export const upsertDayEntryAction = async (formData: FormData) => {
+export const upsertDayEntryAction = async (formData: FormData): Promise<void> => {
   const username = String(formData.get('username') ?? '');
   const status = String(formData.get('status') ?? '');
   const note = (formData.get('personalNote') as string) ?? '';
   const dateValue = String(formData.get('date') ?? '');
 
   const user = await ensureOwner(username);
-  if (!Object.values(AVAILABILITY_STATUS).includes(status)) {
+  if (!Object.values(AVAILABILITY_STATUS).includes(status as typeof AVAILABILITY_STATUS[keyof typeof AVAILABILITY_STATUS])) {
     throw new Error('잘못된 상태값입니다.');
   }
 
@@ -184,13 +183,13 @@ export const upsertDayEntryAction = async (formData: FormData) => {
       },
     },
     update: {
-      availabilityStatus: status,
+      availabilityStatus: status as typeof AVAILABILITY_STATUS[keyof typeof AVAILABILITY_STATUS],
       personalNote: note || null,
     },
     create: {
       userId: user.id,
       date,
-      availabilityStatus: status,
+      availabilityStatus: status as typeof AVAILABILITY_STATUS[keyof typeof AVAILABILITY_STATUS],
       personalNote: note || null,
     },
   });
@@ -199,7 +198,7 @@ export const upsertDayEntryAction = async (formData: FormData) => {
   revalidatePath('/feed');
 };
 
-export const addDayCommentAction = async (formData: FormData) => {
+export const addDayCommentAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 
@@ -209,7 +208,7 @@ export const addDayCommentAction = async (formData: FormData) => {
     content: formData.get('content'),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    throw new Error(parsed.error.issues[0].message);
   }
 
   const date = ensureDate(dateValue);
@@ -280,7 +279,7 @@ const ensureConversation = async (userId: string, otherUserId: string) => {
   return conversation;
 };
 
-export const proposeMeetingAction = async (formData: FormData) => {
+export const proposeMeetingAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 
@@ -290,7 +289,7 @@ export const proposeMeetingAction = async (formData: FormData) => {
     message: formData.get('message') || undefined,
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    throw new Error(parsed.error.issues[0].message);
   }
 
   const receiver = await prisma.user.findUnique({ where: { username } });
@@ -298,13 +297,13 @@ export const proposeMeetingAction = async (formData: FormData) => {
     throw new Error('대상을 찾을 수 없습니다.');
   }
   if (receiver.id === user.id) {
-    return { error: '본인에게는 제안할 수 없습니다.' };
+    throw new Error('본인에게는 제안할 수 없습니다.');
   }
 
   if (receiver.isFriendOnlyForMeetingRequests) {
     const isFriend = await ensureFriendship(user.id, receiver.id);
     if (!isFriend) {
-      return { error: '친구만 약속을 제안할 수 있습니다.' };
+      throw new Error('친구만 약속을 제안할 수 있습니다.');
     }
   }
 
@@ -351,7 +350,7 @@ export const proposeMeetingAction = async (formData: FormData) => {
   revalidatePath('/feed');
 };
 
-export const respondMeetingProposalAction = async (formData: FormData) => {
+export const respondMeetingProposalAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 
@@ -375,16 +374,17 @@ export const respondMeetingProposalAction = async (formData: FormData) => {
   }
 
   if (
-    [PROPOSAL_STATUS.ACCEPTED, PROPOSAL_STATUS.DECLINED].includes(nextStatus) &&
+    (nextStatus === PROPOSAL_STATUS.ACCEPTED || nextStatus === PROPOSAL_STATUS.DECLINED) &&
     !isReceiver
   ) {
     throw new Error('응답 권한이 없습니다.');
   }
 
-  let statusToApply = nextStatus;
-  if (!Object.values(PROPOSAL_STATUS).includes(statusToApply)) {
+  if (!Object.values(PROPOSAL_STATUS).includes(nextStatus as typeof PROPOSAL_STATUS[keyof typeof PROPOSAL_STATUS])) {
     throw new Error('잘못된 상태입니다.');
   }
+
+  const statusToApply = nextStatus as typeof PROPOSAL_STATUS[keyof typeof PROPOSAL_STATUS];
 
   await prisma.meetingProposal.update({
     where: { id: proposalId },
@@ -486,17 +486,17 @@ export const sendMessageAction = async (formData: FormData) => {
   revalidatePath('/messages');
 };
 
-export const sendFriendRequestAction = async (formData: FormData) => {
+export const sendFriendRequestAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 
   const targetUsername = String(formData.get('targetUsername') ?? '');
   const target = await prisma.user.findUnique({ where: { username: targetUsername } });
   if (!target) {
-    return { error: '사용자를 찾을 수 없습니다.' };
+    throw new Error('사용자를 찾을 수 없습니다.');
   }
   if (target.id === user.id) {
-    return { error: '자기 자신에게 요청할 수 없습니다.' };
+    throw new Error('자기 자신에게 요청할 수 없습니다.');
   }
 
   const existing = await prisma.friendship.findFirst({
@@ -510,10 +510,10 @@ export const sendFriendRequestAction = async (formData: FormData) => {
 
   if (existing) {
     if (existing.status === FRIENDSHIP_STATUS.PENDING) {
-      return { error: '이미 친구 요청을 보냈습니다.' };
+      throw new Error('이미 친구 요청을 보냈습니다.');
     }
     if (existing.status === FRIENDSHIP_STATUS.ACCEPTED) {
-      return { error: '이미 친구입니다.' };
+      throw new Error('이미 친구입니다.');
     }
 
     await prisma.friendship.update({
@@ -534,10 +534,9 @@ export const sendFriendRequestAction = async (formData: FormData) => {
   }
 
   revalidatePath('/friends');
-  return { success: '친구 요청을 보냈습니다.' };
 };
 
-export const respondFriendRequestAction = async (formData: FormData) => {
+export const respondFriendRequestAction = async (formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 

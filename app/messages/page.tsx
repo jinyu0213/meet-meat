@@ -72,8 +72,8 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
     selectedConversation?.messages
       .map((message) => message.relatedMeetingProposal)
       .filter(
-        (proposal) =>
-          proposal &&
+        (proposal): proposal is NonNullable<typeof proposal> =>
+          proposal !== null &&
           proposal.status === PROPOSAL_STATUS.PENDING &&
           proposal.receiverId === user.id,
       ) ?? [];
