@@ -22,11 +22,23 @@ Next.js 14 · TypeScript · Prisma · Tailwind CSS 로 제작한 1:1 약속 예�
 
 ## ⚙️ 환경 변수
 
-루트에 `.env` 파일을 생성하고 아래 내용을 채워주세요. (예시 파일을 직접 만들 수 없다면 수동으로 작성해주세요.)
+### 로컬 개발 (SQLite 사용 시)
+
+`prisma/schema.prisma`에서 `provider = "sqlite"`로 설정하고:
 
 ```
 DATABASE_URL="file:./dev.db"
 ```
+
+### 프로덕션 배포 (Vercel 등 - PostgreSQL 필요)
+
+`prisma/schema.prisma`에서 `provider = "postgresql"`로 설정하고:
+
+```
+DATABASE_URL="postgresql://user:password@host:port/database"
+```
+
+**Vercel Postgres 사용 시**: Storage에서 Postgres를 생성하면 자동으로 `POSTGRES_PRISMA_URL` 환경 변수가 설정됩니다.
 
 ## 🚀 실행 방법
 

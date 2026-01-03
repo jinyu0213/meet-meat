@@ -90,32 +90,37 @@ export const verifyPhoneAction = async (_: ActionState, formData: FormData): Pro
 };
 
 export const loginAction = async (_: ActionState, formData: FormData): Promise<ActionState> => {
-  const parsed = loginSchema.safeParse({
-    username: formData.get('username'),
-    password: formData.get('password'),
-  });
+  try {
+    const parsed = loginSchema.safeParse({
+      username: formData.get('username'),
+      password: formData.get('password'),
+    });
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0].message };
+    }
+
+    const { username, password } = parsed.data;
+    const user = await prisma.user.findUnique({ where: { username } });
+    if (!user) {
+      return { error: '아이디 혹은 비밀번호가 올바르지 않습니다.' };
+    }
+
+    if (!user.isPhoneVerified) {
+      return { error: '휴대폰 인증 후 로그인할 수 있습니다.' };
+    }
+
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isValid) {
+      return { error: '아이디 혹은 비밀번호가 올바르지 않습니다.' };
+    }
+
+    await createSession(user.id);
+    redirect('/feed');
+  } catch (error) {
+    console.error('Login error:', error);
+    return { error: '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' };
   }
-
-  const { username, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user) {
-    return { error: '아이디 혹은 비밀번호가 올바르지 않습니다.' };
-  }
-
-  if (!user.isPhoneVerified) {
-    return { error: '휴대폰 인증 후 로그인할 수 있습니다.' };
-  }
-
-  const isValid = await bcrypt.compare(password, user.passwordHash);
-  if (!isValid) {
-    return { error: '아이디 혹은 비밀번호가 올바르지 않습니다.' };
-  }
-
-  await createSession(user.id);
-  redirect('/feed');
 };
 
 export const logoutAction = async () => {
