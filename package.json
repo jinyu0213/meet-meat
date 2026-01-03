@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "node scripts/check-db-type.js && prisma generate && next build",
+    "build:vercel": "node scripts/check-db-type.js && prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma": "prisma",

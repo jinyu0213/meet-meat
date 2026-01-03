@@ -1,5 +1,8 @@
 {
-  "buildCommand": "prisma generate && prisma migrate deploy && next build",
-  "installCommand": "npm install"
+  "buildCommand": "npm run build:vercel",
+  "installCommand": "npm install",
+  "env": {
+    "DATABASE_URL": "@postgres_prisma_url"
+  }
 }
 
