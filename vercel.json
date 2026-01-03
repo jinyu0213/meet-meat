@@ -1,8 +1,5 @@
 {
   "buildCommand": "npm run build:vercel",
-  "installCommand": "npm install",
-  "env": {
-    "DATABASE_URL": "@postgres_prisma_url"
-  }
+  "installCommand": "npm install"
 }
 
